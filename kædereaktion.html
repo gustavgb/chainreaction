@@ -1,0 +1,274 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Kædereaktioner via tændstikker</title>
+    </head>
+    
+    <style>
+        canvas {
+            border: 1px solid black;
+            margin: 0px;
+            padding: 0px;
+        }
+        
+        html, body {
+            margin: 0px;
+            padding: 0px;
+        }
+        
+        #tools {
+            padding: 6px;
+        }
+    </style>
+    
+    <body>
+        
+        <div id="c"></div><br />
+        <div id="tools">
+        Værktøjskasse: <br />
+            <input type="button" value="Tændstik" onclick="tool='match'">
+            <input type="button" value="Kontrolstave" onclick="tool='iron'"><br /><br />
+            Instillinger: <br />
+            Hastighed: <input type="number" value="1.5" step="0.1" min="0.1" max="3" onchange="speed=this.value"><br /><br />
+            Handlinger:<br />
+            <input type="button" value="Genskab opstilling (behold kontrolstave)" onclick="init(250)">
+            <input type="button" value="Skab ukontroleret opstilling" onclick="ir=[];init(250)">
+            <input type="button" value="Skab kontroleret opstilling" onclick="ir=JSON.parse(uncIr);init(250)">
+        </div>
+    
+        <script type="text/javascript">
+            
+            var canvas = document.createElement("canvas");
+            var ctx = canvas.getContext("2d");
+            canvas.width = 550;
+            canvas.height = 550;
+            document.getElementById("c").appendChild(canvas);
+            var cW = canvas.width, cH = canvas.height;
+            
+            
+            var m = [];
+            var ir = [];
+            var uncIr = '[{"x":311.0178840941071,"y":292.3986213644492},{"x":309.4941213438933,"y":347.1814075279276},{"x":301.280802451165,"y":392.08680293919906},{"x":256.36976942002354,"y":433.91165630165995},{"x":212.23788812822343,"y":464.89712297292607},{"x":138.65434027218248,"y":472.50914174636625},{"x":283.4884642001244,"y":394.6993983924865}]';
+            
+            var r = 0;
+            var o = 0;
+            var bg = document.createElement("canvas");
+            bg.width = cW;
+            bg.height = cH;
+            
+            var tool = "match";
+            var speed = 1.5;
+            
+            function init(size) {
+                console.log("Init() called");
+                
+                m = [];
+                r = size;
+                o = size*2*Math.PI;
+                
+                var c = bg.getContext("2d");
+                c.fillStyle = "white";
+                c.fillRect(0, 0, cW, cH);
+                
+                c.fillStyle = "#555";
+                c.beginPath();
+                c.arc(cW/2, cH/2, r, 0, 2*Math.PI, false);
+                c.fill();
+                
+                var run = true;
+                for (var i = 0; i < r; i += 40) {
+                    for (var a = 0; a < 2*Math.PI; a += (2*Math.PI)/(i/18*2*Math.PI)) {
+                        m.push({
+                            x: cW/2 + Math.cos(a)*(i),
+                            y: cH/2 + Math.sin(a)*(i),
+                            ignite: false,
+                            time: 0
+                        });
+                    }
+                    
+                    c.beginPath();
+                    c.arc(cW/2, cH/2, i+20, 0, 2*Math.PI, false);
+                    c.strokeStyle = "#454545";
+                    c.lineWidth = 20;
+                    c.stroke();
+                }
+                
+                /*c.fillStyle = "#555";
+                c.fillRect(cW/2, cH/2-10, r-20, 20);*/
+                
+                var n = 0;
+                for (var i = 20; i < r; i += 40) {
+                    var a = /*(i-20)/40 * 0.25*Math.PI;*/n*(2*Math.PI)/(i/18*2*Math.PI);
+                    n += 3+(i-20)/40;
+                    m.push({
+                        x: cW/2 + Math.cos(a)*(i),
+                        y: cH/2 + Math.sin(a)*(i),
+                        ignite: false,
+                        time: 0
+                    });
+                }
+                
+                for (var i = 0; i < m.length; i++) {
+                    for (var a in ir) {
+                        if (
+                            Math.abs(m[i].x - ir[a].x) <= 10
+                            && Math.abs(m[i].y - ir[a].y) <= 10
+                        ) {
+                            m.splice(i, 1);
+                            i--;
+                            console.log("deleted match in init()");
+                        }
+                    }
+                }
+                
+                /*ctx.beginPath();
+                ctx.moveTo(m[0].x, m[0].y);*/
+                for (var i = 1; i < m.length; i++) {
+                    c.fillStyle = "#444";
+                    c.beginPath();
+                    c.arc(m[i].x, m[i].y, 5 + m[i].time, 0, 2*Math.PI, false);
+                    c.fill();
+                    
+                    //ctx.lineTo(m[i].x, m[i].y);
+                }
+                
+                console.log("Done init()");
+            }
+            init(250);
+            
+            function getXY() {  var x = 0, y = 0; if( typeof( window.pageYOffset ) == 'number' ) { x = window.pageXOffset; y = window.pageYOffset; } else if( document.body && ( document.body.scrollLeft || document.body.scrollTop ) ) {  x = document.body.scrollLeft; y = document.body.scrollTop; } else if( document.documentElement && ( document.documentElement.scrollLeft || document.documentElement.scrollTop ) ) { x = document.documentElement.scrollLeft; y = document.documentElement.scrollTop; } return [x, y];
+	}
+            
+            var mouse = {x:0,y:0};
+            window.addEventListener("mousemove", function (e) {
+                mouse.x = e.clientX + getXY()[0];
+                mouse.y = e.clientY + getXY()[1];
+            }, false);
+            window.addEventListener("mousedown", function (e) {
+                for (var i in m) {
+                    if (
+                        Math.abs(mouse.x - m[i].x) <= 5
+                        && Math.abs(mouse.y - m[i].y) <= 5
+                        && !m[i].ignite
+                    ) {
+                        if (tool == "match") {
+                            m[i].ignite = true;
+                            console.log("Ignited match");
+                        } else if (tool == "iron") {
+                            ir.push({
+                                x: m[i].x,
+                                y: m[i].y
+                            });
+                            m.splice(i, 1);
+                            console.log("deleted match");
+                        }
+                    }
+                }
+            }, false);
+            
+            var images = {};
+            images.match = document.createElement("canvas");
+            images.match.width = 8;
+            images.match.height = 70;
+            images.iron = document.createElement("canvas");
+            images.iron.width = 8;
+            images.iron.height = 70;
+            
+            function initImages() {
+                var c = images.match.getContext("2d");
+                c.fillStyle = "#E29741";
+                c.fillRect(2, 8, 4, 53);
+                c.fillStyle = "#FFB868";
+                c.fillRect(2, 8, 2, 53);
+                
+                c.beginPath();
+                c.arc(4, 8, 4, 0, 2*Math.PI, false);
+                c.fillStyle = "brown";
+                c.strokeStyle = "darkbrown";
+                c.fill();
+                c.stroke();
+                
+                c = images.iron.getContext("2d");
+                c.fillStyle = "#aaa";
+                c.fillRect(2, 5, 4, 60);
+                c.fillStyle = "#ddd";
+                c.fillRect(2, 5, 2, 60);
+            }
+            initImages();
+            
+            function loop() {
+                var ig = [];
+                
+                for (var i = 0; i < m.length; i++) {
+                    if (m[i].ignite) {
+                        if (m[i].time <= 12) {
+                            m[i].time += 2*speed;
+
+                            ig.push({
+                                x: m[i].x,
+                                y: m[i].y,
+                                time: m[i].time
+                            });
+                        } else if (m[i].time > 12) {
+                            m.splice(i, 1);
+                            i--;
+                        }
+                    }
+                }
+                
+                for (var i in m) {
+                    if (!m[i].ignite) {
+                        for (var a in ig) {
+                            if (
+                                Math.abs(m[i].x - ig[a].x) <= 10 + ig[a].time
+                                && Math.abs(m[i].y - ig[a].y) <= 10 + ig[a].time
+                            ) {
+                                m[i].ignite = true;
+                            }
+                        }
+                    }
+                }
+                
+                ctx.drawImage(bg, 0, 0, cW, cH);
+                
+                for (var i = 0; i < ir.length; i++) {
+                    ctx.fillStyle = "#999";
+                    ctx.beginPath();
+                    ctx.arc(ir[i].x, ir[i].y, 5, 0, 2*Math.PI, false);
+                    ctx.fill();
+                }
+                
+                /*ctx.beginPath();
+                ctx.moveTo(m[0].x, m[0].y);*/
+                for (var i = 0; i < m.length; i++) {
+                    ctx.fillStyle = "red";
+                    if (m[i].ignite) ctx.fillStyle = "orange";
+                    ctx.beginPath();
+                    ctx.arc(m[i].x, m[i].y, 5 + m[i].time, 0, 2*Math.PI, false);
+                    ctx.fill();
+                    
+                    //ctx.lineTo(m[i].x, m[i].y);
+                }
+                /*
+                ctx.strokeStyle = "red";
+                ctx.stroke();
+                */
+                
+                ctx.fillStyle = "blue";
+                ctx.font = "15px Comic Sans MS";
+                ctx.textAlign = "right";
+                ctx.textBaseline = "bottom";
+                ctx.fillText("Gustavgb.dk - 2015", cW-3, cH-3);
+                
+                ctx.drawImage(images[tool], mouse.x-4, mouse.y, 8, 70);
+            }
+            
+            setInterval(loop, 1000/24);
+            
+            
+            
+        </script>
+        
+    </body>
+    
+</html>
